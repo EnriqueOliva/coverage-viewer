@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Endpoint Test Coverage</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f4f6f8; color: #1f2933; }
+  header { background: #102a43; color: #f0f4f8; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header .meta { margin-top: 4px; font-size: 12px; color: #9fb3c8; }
+  header .actions { display: flex; gap: 8px; }
+  header button { background: #243b53; color: #d9e2ec; border: 1px solid #334e68; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  header button:hover { background: #334e68; }
+  .tabs { display: flex; gap: 8px; padding: 14px 28px 0 28px; }
+  .tab { border: 1px solid #d9e2ec; background: #ffffff; border-radius: 8px 8px 0 0; padding: 10px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: #486581; }
+  .tab .pct { font-weight: 400; color: #829ab1; margin-left: 6px; }
+  .tab.active { color: #102a43; border-bottom-color: #ffffff; box-shadow: 0 -2px 6px rgba(16, 42, 67, 0.08); }
+  main { padding: 0 28px 40px 28px; }
+  .panel { background: #ffffff; border: 1px solid #d9e2ec; border-radius: 0 10px 10px 10px; padding: 20px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .card { background: #f0f4f8; border-radius: 10px; padding: 12px 18px; min-width: 120px; }
+  .card .value { font-size: 22px; font-weight: 700; }
+  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #627d98; margin-top: 2px; }
+  .card.good .value { color: #0f7b4f; }
+  .card.bad .value { color: #ba2525; }
+  .breakdown { font-size: 13px; color: #486581; margin-bottom: 16px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .controls input[type=text] { flex: 1; min-width: 220px; padding: 8px 12px; border: 1px solid #bcccdc; border-radius: 8px; font-size: 14px; }
+  .controls select { padding: 8px 12px; border: 1px solid #bcccdc; border-radius: 8px; font-size: 14px; background: #ffffff; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #d9e2ec; color: #627d98; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid #e4ebf2; vertical-align: top; }
+  tr.endpoint-row.tested { cursor: pointer; }
+  tr.endpoint-row.tested:hover { background: #f0f4f8; }
+  tr.endpoint-row.untested-row { background: #fff5f5; }
+  .method { display: inline-block; min-width: 52px; text-align: center; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 6px; margin-right: 8px; color: #ffffff; }
+  .method.GET { background: #0b7285; }
+  .method.POST { background: #1d4ed8; }
+  .method.PUT { background: #b45309; }
+  .method.PATCH { background: #6d28d9; }
+  .method.DELETE { background: #b91c1c; }
+  code.path { font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+  .chip { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+  .chip-version { background: #d9e2ec; color: #486581; }
+  .chip-webhook { background: #fff3bf; color: #8a6d00; }
+  .chip-muted { background: #e4ebf2; color: #627d98; }
+  .chip-confidence { background: #ffe3e3; color: #ba2525; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  .badge-tested { background: #e3fcec; color: #0f7b4f; }
+  .badge-untested { background: #ffe3e3; color: #ba2525; }
+  .expander { color: #829ab1; font-size: 12px; }
+  tr.detail-row td { background: #f8fafc; padding: 12px 18px 14px 18px; }
+  .detail-file { margin-bottom: 10px; }
+  .detail-file-name { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: #334e68; font-weight: 600; }
+  ul.detail-cases { margin: 6px 0 0 0; padding-left: 22px; }
+  ul.detail-cases li { font-size: 13px; color: #334e68; padding: 2px 0; }
+  details.unmapped { margin-top: 18px; font-size: 13px; color: #486581; }
+  details.unmapped summary { cursor: pointer; font-weight: 600; }
+  details.unmapped ul { margin: 8px 0 0 0; padding-left: 22px; }
+  details.unmapped code { font-family: Consolas, 'Courier New', monospace; font-size: 12px; }
+  .empty-row td { text-align: center; color: #829ab1; padding: 24px; }
+  .trend { background: #ffffff; border: 1px solid #d9e2ec; border-radius: 10px; padding: 16px 20px; margin: 18px 0 0 0; }
+  .trend h2 { margin: 0 0 10px 0; font-size: 14px; color: #486581; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trend .legend { display: flex; gap: 16px; font-size: 12px; color: #486581; margin-bottom: 8px; }
+  .trend .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .trend .legend span.site::before { background: #1d4ed8; }
+  .trend .legend span.backoffice::before { background: #b45309; }
+  .trend .legend span.dropi::before { background: #0b7285; }
+  .trend .placeholder { font-size: 13px; color: #829ab1; padding: 20px 0; text-align: center; }
+  footer { padding: 14px 28px; font-size: 11px; color: #829ab1; }
+  .overlay { position: fixed; inset: 0; background: #102a43; display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .login-card { background: #ffffff; border-radius: 14px; padding: 34px 38px; width: 360px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35); }
+  .login-card h2 { margin: 0 0 4px 0; font-size: 18px; color: #102a43; }
+  .login-card p { margin: 0 0 18px 0; font-size: 13px; color: #627d98; }
+  .login-card input[type=password] { width: 100%; padding: 10px 12px; border: 1px solid #bcccdc; border-radius: 8px; font-size: 14px; }
+  .login-card .remember { display: flex; align-items: center; gap: 7px; margin: 12px 0 16px 0; font-size: 13px; color: #486581; }
+  .login-card button { width: 100%; padding: 11px; background: #102a43; color: #ffffff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .login-card button:hover { background: #243b53; }
+  .login-error { color: #ba2525; font-size: 13px; margin: 0 0 12px 0; min-height: 17px; }
+  .state-message { padding: 60px 28px; text-align: center; color: #627d98; font-size: 15px; }
+  .state-message button { margin-top: 14px; padding: 9px 18px; border: 1px solid #bcccdc; background: #ffffff; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="login-overlay" class="overlay hidden">
+  <div class="login-card">
+    <h2>Endpoint Test Coverage</h2>
+    <p>This dashboard is protected. Enter the access password.</p>
+    <p id="login-error" class="login-error"></p>
+    <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
+    <label class="remember"><input type="checkbox" id="remember-checkbox" checked /> Remember on this device</label>
+    <button id="login-button">Enter</button>
+  </div>
+</div>
+
+<header id="app-header" class="hidden">
+  <div>
+    <h1>Endpoint Test Coverage</h1>
+    <div class="meta" id="header-meta"></div>
+  </div>
+  <div class="actions">
+    <button id="refresh-button">Refresh</button>
+    <button id="lock-button">Lock</button>
+  </div>
+</header>
+
+<div id="state-message" class="state-message hidden"></div>
+<div class="tabs hidden" id="tabs"></div>
+<main id="panel" class="hidden"></main>
+<div id="trend-container"></div>
+<footer id="app-footer" class="hidden">Data lives in a Google Sheet; refreshed by the local scanner.</footer>
+
+<script>
+(function () {
+  var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbrtbMd2FWuVnrkfxAMIGz8hOanMo3vgjxhKU4zmtOmnkBIFdlQnFKRH5v0rbxBlKJpw/exec';
+  var STORAGE_KEY = 'coverage-viewer-key';
+  var REPO_COLORS = { site: '#1d4ed8', backoffice: '#b45309', dropi: '#0b7285' };
+
+  var state = {
+    repoKey: null,
+    query: '',
+    status: 'all',
+    tag: 'all',
+    expanded: Object.create(null),
+    dashboard: null,
+    history: []
+  };
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  var memoryKey = '';
+
+  function tryStorage(action) {
+    try {
+      return action();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function storedKey() {
+    return tryStorage(function () { return localStorage.getItem(STORAGE_KEY); }) ||
+      tryStorage(function () { return sessionStorage.getItem(STORAGE_KEY); }) ||
+      memoryKey;
+  }
+
+  function saveKey(key, remember) {
+    memoryKey = key;
+    if (remember) {
+      tryStorage(function () { localStorage.setItem(STORAGE_KEY, key); return true; });
+    } else {
+      tryStorage(function () { sessionStorage.setItem(STORAGE_KEY, key); return true; });
+    }
+  }
+
+  function clearKey() {
+    memoryKey = '';
+    tryStorage(function () { localStorage.removeItem(STORAGE_KEY); return true; });
+    tryStorage(function () { sessionStorage.removeItem(STORAGE_KEY); return true; });
+  }
+
+  function setVisible(id, visible) {
+    document.getElementById(id).classList.toggle('hidden', !visible);
+  }
+
+  function showLogin(errorMessage) {
+    setVisible('login-overlay', true);
+    setVisible('app-header', false);
+    setVisible('tabs', false);
+    setVisible('panel', false);
+    setVisible('app-footer', false);
+    setVisible('state-message', false);
+    document.getElementById('trend-container').innerHTML = '';
+    document.getElementById('login-error').textContent = errorMessage || '';
+    document.getElementById('password-input').focus();
+  }
+
+  function showState(message, withRetry) {
+    setVisible('login-overlay', false);
+    setVisible('state-message', true);
+    setVisible('tabs', false);
+    setVisible('panel', false);
+    var html = escapeHtml(message);
+    if (withRetry) {
+      html += '<br /><button id="retry-button">Retry</button>';
+    }
+    var container = document.getElementById('state-message');
+    container.innerHTML = html;
+    if (withRetry) {
+      document.getElementById('retry-button').addEventListener('click', function () { loadData(storedKey()); });
+    }
+  }
+
+  function parseBoolean(value) {
+    return String(value).toLowerCase() === 'true';
+  }
+
+  function buildDashboard(payload) {
+    var reposMeta = [];
+    try {
+      reposMeta = JSON.parse(payload.meta && payload.meta.reposJson ? payload.meta.reposJson : '[]');
+    } catch (error) {
+      reposMeta = [];
+    }
+    var endpointsByRepo = Object.create(null);
+    (payload.endpoints || []).forEach(function (row) {
+      if (typeof row.repo !== 'string' || row.repo === '') { return; }
+      if (!endpointsByRepo[row.repo]) { endpointsByRepo[row.repo] = []; }
+      var testFiles = [];
+      var corrupted = false;
+      try {
+        testFiles = JSON.parse(row.testFiles || '[]');
+        if (!Array.isArray(testFiles)) { testFiles = []; corrupted = true; }
+      } catch (error) {
+        testFiles = [];
+        corrupted = true;
+      }
+      endpointsByRepo[row.repo].push({
+        method: row.method,
+        path: row.path,
+        version: row.version,
+        isWebhook: parseBoolean(row.isWebhook),
+        tested: parseBoolean(row.tested),
+        confidence: row.confidence || null,
+        caseCount: Number(row.caseCount) || 0,
+        testFiles: testFiles,
+        corrupted: corrupted
+      });
+    });
+    var repos = reposMeta.map(function (meta) {
+      return {
+        key: meta.key,
+        name: meta.name,
+        sourceDescription: meta.sourceDescription,
+        commit: meta.commit,
+        endpointTotal: Number(meta.endpointTotal) || 0,
+        testedTotal: Number(meta.testedTotal) || 0,
+        caseTotal: Number(meta.caseTotal) || 0,
+        testFileTotal: Number(meta.testFileTotal) || 0,
+        unmappedTestFiles: meta.unmappedTestFiles || [],
+        endpoints: endpointsByRepo[meta.key] || []
+      };
+    });
+    return {
+      generatedAt: payload.meta ? payload.meta.generatedAt : '',
+      branch: payload.meta ? payload.meta.branch : '',
+      mode: payload.meta ? payload.meta.mode : '',
+      repos: repos
+    };
+  }
+
+  function loadData(key) {
+    if (APPS_SCRIPT_URL.indexOf('PASTE_') !== -1) {
+      showState('This viewer is not configured yet: the Apps Script URL is missing from index.html.', false);
+      return;
+    }
+    if (!key) {
+      showLogin('');
+      return;
+    }
+    showState('Loading coverage data…', false);
+    fetch(APPS_SCRIPT_URL + '?key=' + encodeURIComponent(key))
+      .then(function (response) { return response.json(); })
+      .then(function (payload) {
+        if (payload && payload.error === 'unauthorized') {
+          clearKey();
+          showLogin('Incorrect password.');
+          return;
+        }
+        if (!payload || !payload.meta) {
+          showState('No data uploaded yet. Run the scanner with --upload first.', true);
+          return;
+        }
+        if (!payload.endpoints || payload.endpoints.length === 0) {
+          showState('Data looks incomplete: metadata exists but no endpoint rows were found. Re-run the scanner with --upload.', true);
+          return;
+        }
+        state.dashboard = buildDashboard(payload);
+        state.history = payload.history || [];
+        if (!state.repoKey && state.dashboard.repos.length > 0) {
+          state.repoKey = state.dashboard.repos[0].key;
+        }
+        renderAll();
+      })
+      .catch(function () {
+        showState('Could not reach the data service.', true);
+      });
+  }
+
+  function coveragePercent(repo) {
+    if (repo.endpointTotal === 0) { return 0; }
+    return Math.round((repo.testedTotal / repo.endpointTotal) * 100);
+  }
+
+  function currentRepo() {
+    var found = null;
+    state.dashboard.repos.forEach(function (repo) {
+      if (repo.key === state.repoKey) { found = repo; }
+    });
+    return found;
+  }
+
+  function groupLabel(endpoint) {
+    if (endpoint.isWebhook) { return 'webhooks'; }
+    return endpoint.version;
+  }
+
+  function breakdownHtml(repo) {
+    var groups = Object.create(null);
+    var order = [];
+    repo.endpoints.forEach(function (endpoint) {
+      var label = groupLabel(endpoint);
+      if (!groups[label]) { groups[label] = { tested: 0, total: 0 }; order.push(label); }
+      groups[label].total += 1;
+      if (endpoint.tested) { groups[label].tested += 1; }
+    });
+    var parts = order.map(function (label) {
+      return '<strong>' + escapeHtml(label) + '</strong> ' + groups[label].tested + '/' + groups[label].total;
+    });
+    return parts.join(' &nbsp;·&nbsp; ');
+  }
+
+  function matchesFilters(endpoint) {
+    if (state.status === 'tested' && !endpoint.tested) { return false; }
+    if (state.status === 'untested' && endpoint.tested) { return false; }
+    if (state.tag === 'webhook' && !endpoint.isWebhook) { return false; }
+    if ((state.tag === 'v1' || state.tag === 'v2') && endpoint.version !== state.tag) { return false; }
+    if (state.query !== '') {
+      var needle = state.query.toLowerCase();
+      var haystack = (endpoint.method + ' ' + endpoint.path).toLowerCase();
+      if (haystack.indexOf(needle) === -1) {
+        var inDetails = endpoint.testFiles.some(function (testFile) {
+          if (String(testFile.file).toLowerCase().indexOf(needle) !== -1) { return true; }
+          return (testFile.itTitles || []).some(function (title) {
+            return title.toLowerCase().indexOf(needle) !== -1;
+          });
+        });
+        if (!inDetails) { return false; }
+      }
+    }
+    return true;
+  }
+
+  function endpointCellHtml(endpoint) {
+    var html = '<span class="method ' + endpoint.method + '">' + endpoint.method + '</span>';
+    html += '<code class="path">' + escapeHtml(endpoint.path) + '</code>';
+    html += '<span class="chip chip-version">' + escapeHtml(endpoint.version) + '</span>';
+    if (endpoint.isWebhook) { html += '<span class="chip chip-webhook">webhook</span>'; }
+    return html;
+  }
+
+  function statusCellHtml(endpoint) {
+    if (endpoint.tested) {
+      var fileWord = endpoint.testFiles.length === 1 ? ' file' : ' files';
+      var caseWord = endpoint.caseCount === 1 ? ' case' : ' cases';
+      var html = '<span class="badge badge-tested">&#10003; ' + endpoint.testFiles.length + fileWord + ' · ' + endpoint.caseCount + caseWord + '</span>';
+      if (endpoint.confidence !== 'high') {
+        html += '<span class="chip chip-confidence">' + escapeHtml(endpoint.confidence) + '</span>';
+      }
+      if (endpoint.corrupted) {
+        html += '<span class="chip chip-confidence">stored test data unreadable</span>';
+      }
+      return html;
+    }
+    var untestedHtml = '<span class="badge badge-untested">&#10007; untested</span>';
+    if (endpoint.isWebhook) { untestedHtml += '<span class="chip chip-muted">expected gap</span>'; }
+    return untestedHtml;
+  }
+
+  function detailHtml(endpoint) {
+    var parts = [];
+    endpoint.testFiles.forEach(function (testFile) {
+      parts.push('<div class="detail-file">');
+      var sharedChip = testFile.sharedWithOtherEndpoints ? '<span class="chip chip-muted">file shared with other endpoints</span>' : '';
+      parts.push('<div class="detail-file-name">' + escapeHtml(testFile.file) + sharedChip + '</div>');
+      if ((testFile.itTitles || []).length > 0) {
+        parts.push('<ul class="detail-cases">');
+        testFile.itTitles.forEach(function (title) {
+          parts.push('<li>' + escapeHtml(title) + '</li>');
+        });
+        parts.push('</ul>');
+      }
+      parts.push('</div>');
+    });
+    return parts.join('');
+  }
+
+  function tableHtml(repo) {
+    var rows = [];
+    var visible = repo.endpoints.filter(matchesFilters);
+    visible.forEach(function (endpoint) {
+      var endpointKey = endpoint.method + ' ' + endpoint.path;
+      var rowClasses = 'endpoint-row ' + (endpoint.tested ? 'tested' : 'untested-row');
+      var isExpanded = state.expanded[endpointKey] === true;
+      var expander = endpoint.tested ? '<span class="expander">' + (isExpanded ? '&#9650; hide' : '&#9660; show') + '</span>' : '';
+      rows.push('<tr class="' + rowClasses + '" data-key="' + escapeHtml(endpointKey) + '">');
+      rows.push('<td>' + endpointCellHtml(endpoint) + '</td>');
+      rows.push('<td>' + statusCellHtml(endpoint) + '</td>');
+      rows.push('<td>' + expander + '</td>');
+      rows.push('</tr>');
+      if (endpoint.tested && isExpanded) {
+        rows.push('<tr class="detail-row"><td colspan="3">' + detailHtml(endpoint) + '</td></tr>');
+      }
+    });
+    if (rows.length === 0) {
+      rows.push('<tr class="empty-row"><td colspan="3">No endpoints match the current filters.</td></tr>');
+    }
+    return '<table><thead><tr><th>Endpoint</th><th>Tests</th><th></th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+  }
+
+  function unmappedHtml(repo) {
+    if (repo.unmappedTestFiles.length === 0) { return ''; }
+    var items = repo.unmappedTestFiles.map(function (entry) {
+      return '<li><code>' + escapeHtml(entry.file) + '</code> — ' + escapeHtml(entry.reason) + '</li>';
+    });
+    return '<details class="unmapped"><summary>' + repo.unmappedTestFiles.length +
+      ' test file(s) not mapped to any endpoint</summary><ul>' + items.join('') + '</ul></details>';
+  }
+
+  function trendHtml() {
+    var byTimestamp = Object.create(null);
+    var timestamps = [];
+    state.history.forEach(function (row) {
+      var stamp = String(row.uploadedAt);
+      if (!byTimestamp[stamp]) { byTimestamp[stamp] = Object.create(null); timestamps.push(stamp); }
+      var total = Number(row.endpointTotal) || 0;
+      var tested = Number(row.testedTotal) || 0;
+      byTimestamp[stamp][row.repo] = total === 0 ? 0 : (tested / total) * 100;
+    });
+    timestamps.sort(function (first, second) {
+      return new Date(first).getTime() - new Date(second).getTime();
+    });
+    var recent = timestamps.slice(-30);
+    var legend = '<div class="legend"><span class="site">site</span><span class="backoffice">backoffice</span><span class="dropi">dropi</span></div>';
+    if (recent.length < 2) {
+      return '<div class="trend"><h2>Coverage trend</h2>' + legend +
+        '<div class="placeholder">The trend chart appears after at least two uploads.</div></div>';
+    }
+    var width = 760;
+    var height = 170;
+    var paddingLeft = 38;
+    var paddingRight = 16;
+    var paddingTop = 12;
+    var paddingBottom = 24;
+    var chartWidth = width - paddingLeft - paddingRight;
+    var chartHeight = height - paddingTop - paddingBottom;
+    var svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" preserveAspectRatio="xMidYMid meet">';
+    [0, 25, 50, 75, 100].forEach(function (gridValue) {
+      var y = paddingTop + chartHeight - (gridValue / 100) * chartHeight;
+      svg += '<line x1="' + paddingLeft + '" y1="' + y + '" x2="' + (width - paddingRight) + '" y2="' + y + '" stroke="#e4ebf2" stroke-width="1" />';
+      svg += '<text x="' + (paddingLeft - 6) + '" y="' + (y + 4) + '" font-size="10" fill="#829ab1" text-anchor="end">' + gridValue + '</text>';
+    });
+    Object.keys(REPO_COLORS).forEach(function (repoKey) {
+      var points = [];
+      recent.forEach(function (stamp, index) {
+        var value = byTimestamp[stamp][repoKey];
+        if (value !== undefined) {
+          var x = paddingLeft + (recent.length === 1 ? 0 : (index / (recent.length - 1)) * chartWidth);
+          var y = paddingTop + chartHeight - (value / 100) * chartHeight;
+          points.push({ x: x, y: y, value: value });
+        }
+      });
+      if (points.length > 0) {
+        var path = points.map(function (point) { return point.x + ',' + point.y; }).join(' ');
+        svg += '<polyline points="' + path + '" fill="none" stroke="' + REPO_COLORS[repoKey] + '" stroke-width="2" />';
+        var last = points[points.length - 1];
+        svg += '<circle cx="' + last.x + '" cy="' + last.y + '" r="3" fill="' + REPO_COLORS[repoKey] + '" />';
+        svg += '<text x="' + (last.x - 4) + '" y="' + (last.y - 7) + '" font-size="10" fill="' + REPO_COLORS[repoKey] + '" text-anchor="end">' + Math.round(last.value) + '%</text>';
+      }
+    });
+    var firstLabel = new Date(recent[0]).toLocaleDateString();
+    var lastLabel = new Date(recent[recent.length - 1]).toLocaleDateString();
+    svg += '<text x="' + paddingLeft + '" y="' + (height - 6) + '" font-size="10" fill="#829ab1">' + escapeHtml(firstLabel) + '</text>';
+    svg += '<text x="' + (width - paddingRight) + '" y="' + (height - 6) + '" font-size="10" fill="#829ab1" text-anchor="end">' + escapeHtml(lastLabel) + '</text>';
+    svg += '</svg>';
+    return '<div class="trend"><h2>Coverage trend (% endpoints tested)</h2>' + legend + svg + '</div>';
+  }
+
+  function renderTabs() {
+    var container = document.getElementById('tabs');
+    var html = state.dashboard.repos.map(function (repo) {
+      var activeClass = repo.key === state.repoKey ? ' active' : '';
+      return '<button class="tab' + activeClass + '" data-repo="' + escapeHtml(repo.key) + '">' +
+        escapeHtml(repo.name) + '<span class="pct">' + coveragePercent(repo) + '%</span></button>';
+    });
+    container.innerHTML = html.join('');
+  }
+
+  function renderPanel() {
+    var repo = currentRepo();
+    var container = document.getElementById('panel');
+    if (!repo) {
+      container.innerHTML = '<div class="panel">No repository data.</div>';
+      return;
+    }
+    var untested = repo.endpointTotal - repo.testedTotal;
+    var html = '<div class="panel">';
+    html += '<div class="cards">';
+    html += '<div class="card"><div class="value">' + repo.endpointTotal + '</div><div class="label">Endpoints</div></div>';
+    html += '<div class="card good"><div class="value">' + repo.testedTotal + '</div><div class="label">Tested</div></div>';
+    html += '<div class="card bad"><div class="value">' + untested + '</div><div class="label">Untested</div></div>';
+    html += '<div class="card"><div class="value">' + coveragePercent(repo) + '%</div><div class="label">Coverage</div></div>';
+    html += '<div class="card"><div class="value">' + repo.testFileTotal + '</div><div class="label">Test files</div></div>';
+    html += '<div class="card"><div class="value">' + repo.caseTotal + '</div><div class="label">Test cases</div></div>';
+    html += '</div>';
+    html += '<div class="breakdown">' + breakdownHtml(repo) + ' &nbsp;·&nbsp; source: ' + escapeHtml(repo.sourceDescription) + '</div>';
+    html += '<div class="controls">';
+    html += '<input type="text" id="search-input" placeholder="Search endpoint, test file or test case…" value="' + escapeHtml(state.query) + '" />';
+    html += '<select id="status-select">';
+    html += '<option value="all"' + (state.status === 'all' ? ' selected' : '') + '>All statuses</option>';
+    html += '<option value="tested"' + (state.status === 'tested' ? ' selected' : '') + '>Tested</option>';
+    html += '<option value="untested"' + (state.status === 'untested' ? ' selected' : '') + '>Untested</option>';
+    html += '</select>';
+    html += '<select id="tag-select">';
+    html += '<option value="all"' + (state.tag === 'all' ? ' selected' : '') + '>All tags</option>';
+    html += '<option value="v1"' + (state.tag === 'v1' ? ' selected' : '') + '>v1</option>';
+    html += '<option value="v2"' + (state.tag === 'v2' ? ' selected' : '') + '>v2</option>';
+    html += '<option value="webhook"' + (state.tag === 'webhook' ? ' selected' : '') + '>Webhooks</option>';
+    html += '</select>';
+    html += '</div>';
+    html += tableHtml(repo);
+    html += unmappedHtml(repo);
+    html += '</div>';
+    container.innerHTML = html;
+
+    document.getElementById('search-input').addEventListener('input', function (event) {
+      state.query = event.target.value;
+      var caretPosition = event.target.selectionStart;
+      renderPanel();
+      var restored = document.getElementById('search-input');
+      restored.focus();
+      restored.setSelectionRange(caretPosition, caretPosition);
+    });
+    document.getElementById('status-select').addEventListener('change', function (event) {
+      state.status = event.target.value;
+      renderPanel();
+    });
+    document.getElementById('tag-select').addEventListener('change', function (event) {
+      state.tag = event.target.value;
+      renderPanel();
+    });
+    container.querySelectorAll('tr.endpoint-row.tested').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var endpointKey = row.getAttribute('data-key');
+        state.expanded[endpointKey] = state.expanded[endpointKey] !== true;
+        renderPanel();
+      });
+    });
+  }
+
+  function renderAll() {
+    setVisible('login-overlay', false);
+    setVisible('state-message', false);
+    setVisible('app-header', true);
+    setVisible('tabs', true);
+    setVisible('panel', true);
+    setVisible('app-footer', true);
+    var generated = state.dashboard.generatedAt ? new Date(state.dashboard.generatedAt).toLocaleString() : 'unknown';
+    document.getElementById('header-meta').textContent =
+      state.dashboard.mode + ' · last upload ' + generated;
+    renderTabs();
+    renderPanel();
+    document.getElementById('trend-container').innerHTML = trendHtml();
+  }
+
+  function submitLogin() {
+    var key = document.getElementById('password-input').value.trim();
+    var remember = document.getElementById('remember-checkbox').checked;
+    if (key !== '') {
+      saveKey(key, remember);
+      loadData(key);
+    }
+  }
+
+  document.getElementById('login-button').addEventListener('click', submitLogin);
+  document.getElementById('password-input').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { submitLogin(); }
+  });
+  document.getElementById('refresh-button').addEventListener('click', function () { loadData(storedKey()); });
+  document.getElementById('lock-button').addEventListener('click', function () {
+    clearKey();
+    showLogin('');
+  });
+  document.getElementById('tabs').addEventListener('click', function (event) {
+    var tab = event.target.closest('button.tab');
+    if (tab) {
+      state.repoKey = tab.getAttribute('data-repo');
+      state.expanded = Object.create(null);
+      renderTabs();
+      renderPanel();
+    }
+  });
+
+  loadData(storedKey());
+})();
+</script>
+</body>
+</html>
